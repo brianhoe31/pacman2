@@ -73,7 +73,7 @@ div.brick{
     background-color: blue;
 }
 
-div#pacman{
+div.pacman{
     background: url('pacman.gif');
     background-repeat: no-repeat;
     background-position: center;

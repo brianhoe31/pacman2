@@ -23,79 +23,74 @@ function displayWorld(world) {
 $(document).ready(function () {
     var socket = io();
 
-    function displayPacman(x, y) {
-        $('#pacman').css({ 'top': y * 23 + 'px' });
-        $('#pacman').css({ 'left': x * 20 + 'px' });
-    }
-
-
-    function eatCoin() {
-        $('div.row:nth-of-type(' + (pacman.y + 1) + ') div:nth-of-type(' + (pacman.x + 1) + ')').addClass('empty').removeClass('coin');
-    }
-
     while (!name) {
         name = prompt("Please enter your name");
+    }
+
+    function displayPacman(x, y, name) {
+        console.log(name);
+        $('#' + name).css({ 'top': y * 23 + 'px' });
+        $('#' + name).css({ 'left': x * 20 + 'px' });
+    }
+
+    //create a new pacman div with class .pacman
+    //set pacman to it's current location 
+    function createPacman(name) {
+        $('#container').append("<div class='pacman' id='" + name + "'></div>");
+    }
+
+    //takes the coordinates of player's x/y coordinate and if there is a coin, eats it 
+    function eatCoin(x, y) {
+        $('div.row:nth-of-type(' + (y + 1) + ') div:nth-of-type(' + (x + 1) + ')').addClass('empty').removeClass('coin');
+    }
+
+    function update_move(){
+        socket.on('update_move', function (data) {
+            console.log(data);
+            displayPacman(data.x, data.y, data.name);
+        })
+        socket.on('update_coin', function (data) {
+            eatCoin(data.x, data.y);
+        })
     }
 
     //on page load, create new user and set user location on game
     socket.emit('new_user', { name: name });
     socket.on('start_player', function (data) {
-        displayPacman(data.x, data.y);
-    })
+        createPacman(data.name);
+        displayPacman(data.x, data.y, data.name);
 
-
-    $('button').click(function () {
-        socket.emit('start_game', { name: name });
-
+        socket.emit('check_player');
         socket.on('start_map', function (data) {
+            //create opponents pacman on each other's screen
+            socket.emit('update_opp', {name: name});
+            socket.on('send_opp', function(data){
+                createPacman(data.name);
+                displayPacman(data.x, data.y, data.name);
+            })
+
             $('#stage').html(displayWorld(data.map));
         })
-    });
+    })
 
     //pacman directional movement on direction key press
     $(document).keydown(function (e) {
         if (e.keyCode == 38) {
             let data = { direction: 'up', name: name };
             socket.emit('move', data);
-
-            socket.on('update_move', function(data){
-                displayPacman(data.x, data.y);
-            })
-            // pacman.y--;
-
-            // if (world[pacman.y][pacman.x] == 2) {
-            //     pacman.y++;
-            //     return;
-            // } else {
-            //     movePacman();
-            // }
+            update_move();
         } else if (e.keyCode == 39) {
-            pacman.x++;
-
-            if (world[pacman.y][pacman.x] == 2) {
-                pacman.x--;
-                return;
-            } else {
-                movePacman();
-            }
-        } else if (e.which == 40) {
-            pacman.y++;
-
-            if (world[pacman.y][pacman.x] == 2) {
-                pacman.y--;
-                return;
-            } else {
-                movePacman();
-            }
-        } else if (e.which == 37) {
-            pacman.x--;
-
-            if (world[pacman.y][pacman.x] == 2) {
-                pacman.x++;
-                return;
-            } else {
-                movePacman();
-            }
+            let data = { direction: 'right', name: name };
+            socket.emit('move', data);
+            update_move();
+        } else if (e.keyCode == 40) {
+            let data = { direction: 'down', name: name };
+            socket.emit('move', data);
+            update_move();
+        } else if (e.keyCode == 37) {
+            let data = { direction: 'left', name: name };
+            socket.emit('move', data);
+            update_move();
         }
     })
 });
